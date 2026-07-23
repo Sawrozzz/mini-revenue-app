@@ -193,6 +193,10 @@ function MiniRevenueLicenseApp() {
   const [location, setLocation] = useState<Location | null>(null);
   const [loadLocation, setLoadLocation] = useState(false);
   const [error, setError] = useState("");
+  const [cameraResponse, setCameraResponse] = useState<string| null>(null);
+  const [cameraError, setCameraError] = useState<string| null>(null);
+  const [loadCamera, setLoadCamera] = useState(false);
+  const [locationPermission, setLocationPermission] = useState<PermissionStatus| null>(null);
   const [license, setLicense] = useState<DriverLicense | null>(null);
 
   const userName = user?.name ?? user?.fullName ?? "Guest";
@@ -248,29 +252,43 @@ function MiniRevenueLicenseApp() {
       const res = await sdk.device.location({
         reason: "To view your current location",
       });
+      setLocationPermission(res.status);
       switch (res.status) {
         case "granted":
           setLocation(res.data!);
           break;
 
         case "denied":
-          alert("Location permission denied.");
+          setError("Location permission denied.");
           break;
 
         case "parmanentlyDenied":
-          alert("Please enable location permission from device settings.");
+          setError("Please enable location permission from device settings.");
           break;
 
         case "restricted":
-          alert("Location access is restricted on this device.");
+          setError("Location access is restricted on this device.");
           break;
       }
-      setLoadLocation(false);
     } catch (error) {
-      setLocation(error as any);
-      setLoadLocation(false);
+      setError((error as any).message);
+      setLocationPermission("denied");
     } finally {
       setLoadLocation(false);
+    }
+  };
+
+  const handleOpenCamera = async () => {
+    setLoadCamera(true);
+    setCameraResponse(null);
+    setCameraError(null);
+    try {
+      const res = await sdk.device.camera();
+      setCameraResponse(JSON.stringify(res, null, 2));
+    } catch (error) {
+      setCameraError(error instanceof Error ? error.message : "Failed to open camera.");
+    } finally {
+      setLoadCamera(false);
     }
   };
 
@@ -470,11 +488,30 @@ function MiniRevenueLicenseApp() {
       >
         Your location
       </button>
+      {error && locationPermission !== "granted" && (
+        <div className="text-rose-600 text-sm mt-2">{error}</div>
+      )}
       {location && (
-        <div>
-          Lat: {location?.latitude}, Lng: {location?.longitude} , Accuracy:{" "}
+        <div className="text-slate-600 text-sm mt-2">
+          Lat: {location?.latitude}, Lng: {location?.longitude} , Accuracy: {" "}
           {location?.accuracy}
         </div>
+      )}
+
+      <button
+        className="rounded border py-2 px-4 cursor-pointer mt-4"
+        onClick={handleOpenCamera}
+        disabled={loadCamera}
+      >
+        {loadCamera ? "Opening camera..." : "Open Camera"}
+      </button>
+      {cameraResponse && (
+        <pre className="text-left font-mono text-xs p-3 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-100 mt-2 overflow-auto max-h-48">
+          {cameraResponse}
+        </pre>
+      )}
+      {cameraError && (
+        <div className="text-rose-600 text-sm mt-2">{cameraError}</div>
       )}
     </div>
   );
