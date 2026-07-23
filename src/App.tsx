@@ -8,7 +8,7 @@ import {
 import "./index.css";
 
 const MODULE_ID = "mini-revenue-app";
-const PAYMENT_MODULE_ID = "payment";
+const CHAT_MODULE_ID = "chat-mini-app";
 
 export type DriverLicense = {
   licenseNumber: string;
@@ -189,16 +189,6 @@ function MiniRevenueLicenseApp() {
   const handleHttpGet = async () => {
     setLoading(true);
     try {
-      // const res = await sdk.http.post(
-      //   "/api/driving-license",
-      //   {
-      //     method: "GET",
-      //     path: "/v1/license",
-      //   },
-      //   {
-      //     "x-app-id": MODULE_ID,
-      //   },
-      // );
       const res = await sdk.http.post({
         endpoint: "/api/driving-license",
         body: { method: "GET", path: "/v1/license" },
@@ -221,17 +211,15 @@ function MiniRevenueLicenseApp() {
     setNavLoading(true);
     setNavResult("");
     try {
-      const paymentPayload = {
-        amount: "250.00",
-        currency: "USD",
-        purpose: "driving_license_renewal",
+      const payload = {
+        purpose: "Want to chat with AI",
         sourceApp: MODULE_ID,
         timestamp: Date.now().toString(),
       };
       await sdk.navigation.navigate({
         route: "/",
-        app: PAYMENT_MODULE_ID,
-        params: paymentPayload,
+        app: CHAT_MODULE_ID,
+        params: payload,
       });
       setNavResult("Payment workflow initialized!");
     } catch (err) {
@@ -244,11 +232,6 @@ function MiniRevenueLicenseApp() {
   };
 
   const handleViewLocation = async () => {
-    console.log("[MINI-APP] handleViewLocation clicked");
-    console.log("[MINI-APP] sdk object:", sdk);
-    console.log("[MINI-APP] sdk.device:", sdk?.device);
-    console.log("[MINI-APP] sdk.device.location:", sdk?.device?.location);
-
     setLoadLocation(true);
     try {
       const res = await sdk.device.location();
@@ -420,7 +403,7 @@ function MiniRevenueLicenseApp() {
           {error && <div className="border">{error}</div>}
         </div>
 
-        {/* Action / Payment Module */}
+        {/* Action / Chat app Module */}
         <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-4 shadow-sm">
           <button
             onClick={handleNavigate}
@@ -431,8 +414,8 @@ function MiniRevenueLicenseApp() {
               "Processing..."
             ) : (
               <>
-                <span>💳</span>
-                <span>Initiate License Payment</span>
+                <span>🤖</span>
+                <span>Chat With AI</span>
               </>
             )}
           </button>
@@ -460,7 +443,8 @@ function MiniRevenueLicenseApp() {
       </button>
       {location && (
         <div>
-          Lat: {location?.latitude}, Lng: {location?.longitude} , Accuracy: {location?.accuracy}
+          Lat: {location?.latitude}, Lng: {location?.longitude} , Accuracy:{" "}
+          {location?.accuracy}
         </div>
       )}
     </div>
