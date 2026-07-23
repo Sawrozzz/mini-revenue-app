@@ -51,6 +51,7 @@ export type Location = {
   latitude: number;
   accuracy?: number;
 };
+
 export type Camera = {
   url: string;
   fileName?: string;
@@ -199,6 +200,8 @@ function MiniRevenueLicenseApp() {
   const [loadCamera, setLoadCamera] = useState(false);
   const [locationPermission, setLocationPermission] =
     useState<PermissionStatus | null>(null);
+  const [cameraPermission, setCameraPermission] =
+    useState<PermissionStatus | null>(null);
   const [license, setLicense] = useState<DriverLicense | null>(null);
 
   const userName = user?.name ?? user?.fullName ?? "Guest";
@@ -250,6 +253,7 @@ function MiniRevenueLicenseApp() {
 
   const handleViewLocation = async () => {
     setLoadLocation(true);
+    setError("");
     try {
       const res = await sdk.device.location({
         reason: "To view your current location",
@@ -285,22 +289,43 @@ function MiniRevenueLicenseApp() {
     setCameraResponse(null);
     setCameraError(null);
     try {
-      const res = await sdk.device.camera();
-      setCameraResponse(res);
+      const res = await sdk.device.camera({
+        reason: "To capture a photo for verification",
+      });
+      setCameraPermission(res.status);
+      switch (res.status) {
+        case "granted":
+          setCameraResponse(res.data!);
+          break;
+
+        case "denied":
+          setCameraError("Camera permission denied.");
+          break;
+
+        case "parmanentlyDenied":
+          setCameraError("Please enable camera permission from device settings.");
+          break;
+
+        case "restricted":
+          setCameraError("Camera access is restricted on this device.");
+          break;
+      }
     } catch (error) {
       setCameraError(
         error instanceof Error ? error.message : "Failed to open camera.",
       );
+      setCameraPermission("denied");
     } finally {
       setLoadCamera(false);
     }
   };
 
-  // const imageSrc = cameraResponse?.url.startsWith("data:")
-  // ? cameraResponse.url
-  // : cameraResponse?.url.startsWith("http://") || cameraResponse?.url.startsWith("https://")
-  //   ? cameraResponse.url
-  //   : `data:${cameraResponse?.mimeType};base64,${cameraResponse?.url}`;
+  const imageSrc = cameraResponse?.url.startsWith("data:")
+    ? cameraResponse.url
+    : cameraResponse?.url.startsWith("http://") ||
+      cameraResponse?.url.startsWith("https://")
+    ? cameraResponse.url
+    : `data:${cameraResponse?.mimeType};base64,${cameraResponse?.url}`;
 
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col items-center justify-center p-4 md:p-8 antialiased">
@@ -492,7 +517,7 @@ function MiniRevenueLicenseApp() {
       </div>
 
       <button
-        className="rounded border py-2 px-4 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+        className="rounded border py-2 px-4 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 mt-4"
         onClick={handleViewLocation}
         disabled={loadLocation}
       >
@@ -517,20 +542,27 @@ function MiniRevenueLicenseApp() {
       )}
 
       <button
-        className="rounded border py-2 px-4 cursor-pointer mt-4"
+        className="rounded border py-2 px-4 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 mt-4"
         onClick={handleOpenCamera}
         disabled={loadCamera}
       >
-        {loadCamera ? "Opening camera..." : "Open Camera"}
+        Open Camera
       </button>
 
-      {cameraResponse && (
+      {loadCamera && (
+        <div className="mt-2">
+          <Loader />
+        </div>
+      )}
+
+      {cameraError && !loadCamera && cameraPermission !== "granted" && (
+        <div className="mt-2 text-sm text-rose-600">{cameraError}</div>
+      )}
+
+      {!loadCamera && cameraResponse && (
         <div className="mt-4 rounded-lg border bg-slate-50 p-4">
           <img
-            src={
-              // imageSrc
-              cameraResponse?.url
-            }
+            src={imageSrc}
             alt={cameraResponse.fileName}
             className="mx-auto max-h-80 max-w-full rounded border object-contain"
           />
@@ -552,7 +584,6 @@ function MiniRevenueLicenseApp() {
             </div>
           </div>
 
-          {/* Optional: Raw response */}
           <details className="mt-5">
             <summary className="cursor-pointer font-medium text-slate-700">
               View Raw Response
@@ -563,10 +594,6 @@ function MiniRevenueLicenseApp() {
             </pre>
           </details>
         </div>
-      )}
-
-      {cameraError && (
-        <div className="text-rose-600 text-sm mt-2">{cameraError}</div>
       )}
     </div>
   );
