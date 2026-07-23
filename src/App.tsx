@@ -510,40 +510,42 @@ function MiniRevenueLicenseApp() {
         </div>
       )}
 
-  <button
-  className="rounded border py-2 px-4 cursor-pointer mt-4"
-  onClick={handleOpenCamera}
-  disabled={loadCamera}
->
-  {loadCamera ? "Opening camera..." : "Open Camera"}
-</button>
+      <button
+        className="rounded border py-2 px-4 cursor-pointer mt-4"
+        onClick={handleOpenCamera}
+        disabled={loadCamera}
+      >
+        {loadCamera ? "Opening camera..." : "Open Camera"}
+      </button>
 
-{cameraResponse && (
-  <div className="mt-4 rounded-lg border p-4 bg-slate-50">
-    <img
-      src={cameraResponse.url}
-      alt={cameraResponse.fileName}
-      className="max-w-full max-h-80 rounded border object-contain mx-auto"
-    />
+      {cameraResponse && (
+        <div className="mt-4 rounded-lg border p-4 bg-slate-50">
+          <img
+            src={cameraResponse.url}
+            alt={cameraResponse.fileName}
+            className="max-w-full max-h-80 rounded border object-contain mx-auto"
+          />
 
-    <div className="mt-3 text-sm text-slate-600 space-y-1">
-      <div>
-        <span className="font-medium">File:</span> {cameraResponse.fileName}
-      </div>
-      <div>
-        <span className="font-medium">Type:</span> {cameraResponse.mimeType}
-      </div>
-      <div>
-        <span className="font-medium">Size:</span>{" "}
-        {(cameraResponse.byteSize / 1024).toFixed(2)} KB
-      </div>
-    </div>
-  </div>
-)}
+          <div className="mt-3 text-sm text-slate-600 space-y-1">
+            <div>
+              <span className="font-medium">File:</span>{" "}
+              {cameraResponse.fileName}
+            </div>
+            <div>
+              <span className="font-medium">Type:</span>{" "}
+              {cameraResponse.mimeType}
+            </div>
+            <div>
+              <span className="font-medium">Size:</span>{" "}
+              {(cameraResponse.byteSize / 1024).toFixed(2)} KB
+            </div>
+          </div>
+        </div>
+      )}
 
-{cameraError && (
-  <div className="text-rose-600 text-sm mt-2">{cameraError}</div>
-)}
+      {cameraError && (
+        <div className="text-rose-600 text-sm mt-2">{cameraError}</div>
+      )}
     </div>
   );
 }
