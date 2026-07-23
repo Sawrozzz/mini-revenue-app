@@ -460,7 +460,7 @@ function MiniRevenueLicenseApp() {
       </button>
       {location && (
         <div>
-          Lat: {location?.latitude}, Lng: {location?.longitude}
+          Lat: {location?.latitude}, Lng: {location?.longitude} , Accuracy: {location?.accuracy}
         </div>
       )}
     </div>
