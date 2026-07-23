@@ -6,6 +6,7 @@ import {
   type ReactNode,
 } from "react";
 import "./index.css";
+import { Loader } from "./components/Loader";
 
 const MODULE_ID = "mini-revenue-app";
 const CHAT_MODULE_ID = "chat-mini-app";
@@ -193,10 +194,11 @@ function MiniRevenueLicenseApp() {
   const [location, setLocation] = useState<Location | null>(null);
   const [loadLocation, setLoadLocation] = useState(false);
   const [error, setError] = useState("");
-  const [cameraResponse, setCameraResponse] = useState<string| null>(null);
-  const [cameraError, setCameraError] = useState<string| null>(null);
+  const [cameraResponse, setCameraResponse] = useState<Camera | null>(null);
+  const [cameraError, setCameraError] = useState<string | null>(null);
   const [loadCamera, setLoadCamera] = useState(false);
-  const [locationPermission, setLocationPermission] = useState<PermissionStatus| null>(null);
+  const [locationPermission, setLocationPermission] =
+    useState<PermissionStatus | null>(null);
   const [license, setLicense] = useState<DriverLicense | null>(null);
 
   const userName = user?.name ?? user?.fullName ?? "Guest";
@@ -284,9 +286,11 @@ function MiniRevenueLicenseApp() {
     setCameraError(null);
     try {
       const res = await sdk.device.camera();
-      setCameraResponse(JSON.stringify(res, null, 2));
+      setCameraResponse(res);
     } catch (error) {
-      setCameraError(error instanceof Error ? error.message : "Failed to open camera.");
+      setCameraError(
+        error instanceof Error ? error.message : "Failed to open camera.",
+      );
     } finally {
       setLoadCamera(false);
     }
@@ -482,37 +486,64 @@ function MiniRevenueLicenseApp() {
       </div>
 
       <button
-        className="rounded border py-2 px-4 cursor-pointer"
+        className="rounded border py-2 px-4 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
         onClick={handleViewLocation}
         disabled={loadLocation}
       >
         Your location
       </button>
-      {error && locationPermission !== "granted" && (
-        <div className="text-rose-600 text-sm mt-2">{error}</div>
-      )}
-      {location && (
-        <div className="text-slate-600 text-sm mt-2">
-          Lat: {location?.latitude}, Lng: {location?.longitude} , Accuracy: {" "}
-          {location?.accuracy}
+
+      {loadLocation && (
+        <div className="mt-2">
+          <Loader />
         </div>
       )}
 
-      <button
-        className="rounded border py-2 px-4 cursor-pointer mt-4"
-        onClick={handleOpenCamera}
-        disabled={loadCamera}
-      >
-        {loadCamera ? "Opening camera..." : "Open Camera"}
-      </button>
-      {cameraResponse && (
-        <pre className="text-left font-mono text-xs p-3 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-100 mt-2 overflow-auto max-h-48">
-          {cameraResponse}
-        </pre>
+      {error && !loadLocation && locationPermission !== "granted" && (
+        <div className="mt-2 text-sm text-rose-600">{error}</div>
       )}
-      {cameraError && (
-        <div className="text-rose-600 text-sm mt-2">{cameraError}</div>
+
+      {!loadLocation && location && (
+        <div className="mt-2 text-sm text-slate-600">
+          Lat: {location.latitude}, Lng: {location.longitude}, Accuracy:{" "}
+          {location.accuracy}
+        </div>
       )}
+
+  <button
+  className="rounded border py-2 px-4 cursor-pointer mt-4"
+  onClick={handleOpenCamera}
+  disabled={loadCamera}
+>
+  {loadCamera ? "Opening camera..." : "Open Camera"}
+</button>
+
+{cameraResponse && (
+  <div className="mt-4 rounded-lg border p-4 bg-slate-50">
+    <img
+      src={cameraResponse.url}
+      alt={cameraResponse.fileName}
+      className="max-w-full max-h-80 rounded border object-contain mx-auto"
+    />
+
+    <div className="mt-3 text-sm text-slate-600 space-y-1">
+      <div>
+        <span className="font-medium">File:</span> {cameraResponse.fileName}
+      </div>
+      <div>
+        <span className="font-medium">Type:</span> {cameraResponse.mimeType}
+      </div>
+      <div>
+        <span className="font-medium">Size:</span>{" "}
+        {(cameraResponse.byteSize / 1024).toFixed(2)} KB
+      </div>
+    </div>
+  </div>
+)}
+
+{cameraError && (
+  <div className="text-rose-600 text-sm mt-2">{cameraError}</div>
+)}
     </div>
   );
 }

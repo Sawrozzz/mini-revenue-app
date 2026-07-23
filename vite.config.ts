@@ -63,7 +63,7 @@ export default defineConfig({
     },
     rollupOptions: {
       output: {
-        inlineDynamicImports: false,
+        codeSplitting: false,
         format: "es",
         chunkFileNames: "assets/[name]-[hash].js",
         assetFileNames: "assets/[name]-[hash][extname]",
