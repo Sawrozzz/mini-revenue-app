@@ -39,15 +39,29 @@ export type Address = {
   country: string;
 };
 
+export type PermissionStatus =
+  | "granted"
+  | "denied"
+  | "parmanentlyDenied"
+  | "restricted";
+
 export type Location = {
   longitude: number;
   latitude: number;
   accuracy?: number;
 };
+export type Camera = {
+  url?: string;
+  fileName?: string;
+  mimeType?: string;
+  byteSize: number;
+};
 
-function getSdk(id: string) {
-  return window.getMiniAppBridge?.()?.getInstance(id) ?? null;
-}
+export type DevicePermissionRespons<T> = {
+  status: PermissionStatus;
+  data?: T;
+  error?: string;
+};
 
 interface SdkContextValue {
   sdk: any | null;
@@ -63,6 +77,10 @@ const SdkContext = createContext<SdkContextValue>({
   error: null,
 });
 
+function getSdk(id: string) {
+  return window.getMiniAppBridge?.()?.getInstance(id) ?? null;
+}
+
 function PlatformSdkProvider({
   moduleId,
   children,
@@ -74,11 +92,6 @@ function PlatformSdkProvider({
   const [user, setUser] = useState<any | null>(null);
   const [isReady, setIsReady] = useState(false);
   const [error, setError] = useState<Error | null>(null);
-
-  window.addEventListener("message", (event) => {
-    console.log("RECEIVED:", event.data);
-    console.log("From origin:", event.origin);
-  });
 
   useEffect(() => {
     let cancelled = false;
@@ -107,9 +120,7 @@ function PlatformSdkProvider({
         await new Promise((r) => setTimeout(r, 200));
       }
       if (!cancelled) {
-        setError(
-          new Error(`SDK not injected for module "${moduleId}" after retries.`),
-        );
+        setError(new Error("SDK not injected after retries."));
       }
     };
 
@@ -235,9 +246,25 @@ function MiniRevenueLicenseApp() {
     setLoadLocation(true);
     try {
       const res = await sdk.device.location({
-        reason: "To view your current location"
+        reason: "To view your current location",
       });
-      setLocation(res);
+      switch (res.status) {
+        case "granted":
+          setLocation(res.data!);
+          break;
+
+        case "denied":
+          alert("Location permission denied.");
+          break;
+
+        case "parmanentlyDenied":
+          alert("Please enable location permission from device settings.");
+          break;
+
+        case "restricted":
+          alert("Location access is restricted on this device.");
+          break;
+      }
       setLoadLocation(false);
     } catch (error) {
       setLocation(error as any);
@@ -290,7 +317,7 @@ function MiniRevenueLicenseApp() {
             ) : (
               <div className="space-y-6">
                 {/* Visual License Representation */}
-                <div className="relative bg-gradient-to-br from-slate-50 to-slate-100/50 rounded-2xl p-5 border border-slate-200 flex flex-col sm:flex-row gap-5 items-center sm:items-start">
+                <div className="relative bg-linear-to-br from-slate-50 to-slate-100/50 rounded-2xl p-5 border border-slate-200 flex flex-col sm:flex-row gap-5 items-center sm:items-start">
                   {/* Photo & Name Section */}
                   <div className="flex flex-col items-center text-center sm:text-left">
                     <div className="w-28 h-36 bg-slate-200 rounded-xl overflow-hidden shadow-sm border-2 border-white ring-1 ring-slate-200">

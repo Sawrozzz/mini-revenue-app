@@ -87,6 +87,7 @@ interface GovSdkRegistry {
     options?: { timeout?: number; retryAttempts?: number; retryDelayMs?: number }
   ): Promise<GovSdkInstance>;
   getInstance(moduleId: string): GovSdkInstance | null;
+  getActiveInstance(): GovSdkInstance | null;
   destroyInstance(moduleId: string): void;
   hasInstance(moduleId: string): boolean;
   getActiveModuleIds(): string[];
