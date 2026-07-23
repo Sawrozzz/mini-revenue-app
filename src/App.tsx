@@ -52,7 +52,7 @@ export type Location = {
   accuracy?: number;
 };
 export type Camera = {
-  url?: string;
+  url: string;
   fileName?: string;
   mimeType?: string;
   byteSize: number;
@@ -519,27 +519,38 @@ function MiniRevenueLicenseApp() {
       </button>
 
       {cameraResponse && (
-        <div className="mt-4 rounded-lg border p-4 bg-slate-50">
+        <div className="mt-4 rounded-lg border bg-slate-50 p-4">
           <img
-            src={cameraResponse.url}
+            src={
+              cameraResponse?.url.startsWith("data:")
+                ? cameraResponse.url
+                : `data:${cameraResponse.mimeType};base64,${cameraResponse.url}`
+            }
             alt={cameraResponse.fileName}
-            className="max-w-full max-h-80 rounded border object-contain mx-auto"
+            className="mx-auto max-h-80 max-w-full rounded border object-contain"
           />
 
-          <div className="mt-3 text-sm text-slate-600 space-y-1">
-            <div>
+          <div className="mt-4 flex flex-wrap gap-3 text-sm">
+            <div className="rounded bg-white border px-3 py-2">
               <span className="font-medium">File:</span>{" "}
               {cameraResponse.fileName}
             </div>
-            <div>
+
+            <div className="rounded bg-white border px-3 py-2">
               <span className="font-medium">Type:</span>{" "}
               {cameraResponse.mimeType}
             </div>
-            <div>
+
+            <div className="rounded bg-white border px-3 py-2">
               <span className="font-medium">Size:</span>{" "}
               {(cameraResponse.byteSize / 1024).toFixed(2)} KB
             </div>
           </div>
+
+          {/* Optional: Raw response */}
+          <pre className="mt-4 overflow-auto rounded border bg-slate-900 p-3 text-xs text-slate-100">
+            {JSON.stringify(cameraResponse, null, 2)}
+          </pre>
         </div>
       )}
 
