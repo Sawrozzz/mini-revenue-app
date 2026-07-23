@@ -234,7 +234,9 @@ function MiniRevenueLicenseApp() {
   const handleViewLocation = async () => {
     setLoadLocation(true);
     try {
-      const res = await sdk.device.location();
+      const res = await sdk.device.location({
+        reason: "To view your current location"
+      });
       setLocation(res);
       setLoadLocation(false);
     } catch (error) {
