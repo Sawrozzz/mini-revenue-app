@@ -296,6 +296,12 @@ function MiniRevenueLicenseApp() {
     }
   };
 
+  // const imageSrc = cameraResponse?.url.startsWith("data:")
+  // ? cameraResponse.url
+  // : cameraResponse?.url.startsWith("http://") || cameraResponse?.url.startsWith("https://")
+  //   ? cameraResponse.url
+  //   : `data:${cameraResponse?.mimeType};base64,${cameraResponse?.url}`;
+
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col items-center justify-center p-4 md:p-8 antialiased">
       <div className="max-w-xl w-full space-y-6">
@@ -522,9 +528,8 @@ function MiniRevenueLicenseApp() {
         <div className="mt-4 rounded-lg border bg-slate-50 p-4">
           <img
             src={
-              cameraResponse?.url.startsWith("data:")
-                ? cameraResponse.url
-                : `data:${cameraResponse.mimeType};base64,${cameraResponse.url}`
+              // imageSrc
+              cameraResponse?.url
             }
             alt={cameraResponse.fileName}
             className="mx-auto max-h-80 max-w-full rounded border object-contain"
@@ -548,9 +553,15 @@ function MiniRevenueLicenseApp() {
           </div>
 
           {/* Optional: Raw response */}
-          <pre className="mt-4 overflow-auto rounded border bg-slate-900 p-3 text-xs text-slate-100">
-            {JSON.stringify(cameraResponse, null, 2)}
-          </pre>
+          <details className="mt-5">
+            <summary className="cursor-pointer font-medium text-slate-700">
+              View Raw Response
+            </summary>
+
+            <pre className="mt-3 max-h-64 overflow-auto rounded-lg border bg-slate-900 p-4 text-xs text-slate-100">
+              {JSON.stringify(cameraResponse, null, 2)}
+            </pre>
+          </details>
         </div>
       )}
 
