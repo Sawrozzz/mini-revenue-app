@@ -79,15 +79,13 @@ const SdkContext = createContext<SdkContextValue>({
   error: null,
 });
 
-function getSdk(id: string) {
-  return window.getMiniAppBridge?.()?.getInstance(id) ?? null;
+function getSdk() {
+  return window.getMiniAppBridge?.()?.getActiveInstance() ?? null;
 }
 
 function PlatformSdkProvider({
-  moduleId,
   children,
 }: {
-  moduleId: string;
   children: ReactNode;
 }) {
   const [sdk, setSdk] = useState<any | null>(null);
@@ -102,7 +100,7 @@ function PlatformSdkProvider({
       for (let attempt = 0; attempt < 10; attempt++) {
         if (cancelled) return;
 
-        const instance = getSdk(moduleId);
+        const instance = getSdk();
 
         if (instance) {
           try {
@@ -131,7 +129,7 @@ function PlatformSdkProvider({
     return () => {
       cancelled = true;
     };
-  }, [moduleId]);
+  }, []);
 
   if (error) {
     return <LoadError message={error.message} />;
@@ -612,7 +610,7 @@ function Info({ label, value }: { label: string; value: React.ReactNode }) {
 
 export default function App() {
   return (
-    <PlatformSdkProvider moduleId={MODULE_ID}>
+    <PlatformSdkProvider>
       <MiniRevenueLicenseApp />
     </PlatformSdkProvider>
   );
