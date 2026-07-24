@@ -86,9 +86,7 @@ function getSdk() {
 
 function PlatformSdkProvider({
   children,
-  // moduleId
 }: {
-  moduleId:string;
   children: ReactNode;
 }) {
   const [sdk, setSdk] = useState<any | null>(null);
@@ -259,6 +257,7 @@ function MiniRevenueLicenseApp() {
       const res = await sdk.device.location({
         reason: "To view your current location",
       });
+      console.log("Location data", res)
       setLocationPermission(res.status);
       switch (res.status) {
         case "granted":
@@ -614,7 +613,7 @@ function Info({ label, value }: { label: string; value: React.ReactNode }) {
 
 export default function App() {
   return (
-    <PlatformSdkProvider moduleId={MODULE_ID}>
+    <PlatformSdkProvider >
       <MiniRevenueLicenseApp />
     </PlatformSdkProvider>
   );

@@ -4,37 +4,98 @@ import tailwindcss from "@tailwindcss/vite";
 import fs from "node:fs";
 import path from "node:path";
 
-// 1. Define a tiny custom plugin to mutate manifest.json
-function addFrameworkToManifest(frameworkName: string): Plugin {
+
+const pkgPath = path.resolve(process.cwd(), "package.json");
+const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8"));
+
+function createCustomManifest(): Plugin {
   return {
-    name: "framework",
-    // writeBundle runs right after Vite writes all dist files to disk
+    name: "custom-manifest",
     async writeBundle(options) {
       const outDir = options.dir || "dist";
-      // Vite 5+ defaults manifest to dist/manifest.json or dist/.vite/manifest.json
+
       const possibleManifestPaths = [
         path.resolve(outDir, "manifest.json"),
         path.resolve(outDir, ".vite/manifest.json"),
       ];
 
-      const manifestPath = possibleManifestPaths.find((p) => fs.existsSync(p));
+      const originalManifestPath = possibleManifestPaths.find((p) =>
+        fs.existsSync(p),
+      );
 
-      if (manifestPath) {
-        const manifestContent = JSON.parse(
-          fs.readFileSync(manifestPath, "utf-8")
-        );
+      if (!originalManifestPath) return;
 
-        // Loop through all chunks in the manifest and inject the field
-        Object.keys(manifestContent).forEach((key) => {
-          manifestContent[key].framework = frameworkName;
+      const viteManifest = JSON.parse(
+        fs.readFileSync(originalManifestPath, "utf-8"),
+      );
+
+      const entryKey = Object.keys(viteManifest).find(
+        (key) => viteManifest[key].isEntry,
+      );
+
+      const entryItem = entryKey ? viteManifest[entryKey] : null;
+
+      const entryFile = entryItem?.file || "";
+      const styles = entryItem?.css || [];
+
+      const getAllFiles = (dirPath: string, arrayOfFiles: string[] = []) => {
+        const files = fs.readdirSync(dirPath);
+
+        files.forEach((file) => {
+          const fullPath = path.join(dirPath, file);
+          if (fs.statSync(fullPath).isDirectory()) {
+            arrayOfFiles = getAllFiles(fullPath, arrayOfFiles);
+          } else {
+            // Get path relative to outDir
+            const relativePath = path
+              .relative(outDir, fullPath)
+              .replace(/\\/g, "/"); // Normalize Windows path slashes
+
+            // Exclude manifest file itself from files array
+            if (!relativePath.endsWith("manifest.json")) {
+              arrayOfFiles.push(relativePath);
+            }
+          }
         });
 
-        // Save updated manifest.json back to disk
-        fs.writeFileSync(
-          manifestPath,
-          JSON.stringify(manifestContent, null, 2)
-        );
+        return arrayOfFiles;
+      };
+
+      const allFiles = getAllFiles(outDir);
+
+      const customManifest = {
+        schemaVersion: "1",
+        framework: "react",
+        application: {
+          id: pkg.name || "mini-revenue-app",
+          name: pkg.name || "revenue-app",
+          version: pkg.version || "1.2.3",
+          type: "mini-app",
+        },
+        platform: {
+          runtime: "^1.0.0",
+          sdk: "^2.0.0",
+        },
+        bundle: {
+          entry: entryFile,
+          styles: styles,
+          files: allFiles,
+        },
+      };
+
+      const finalManifestPath = path.resolve(outDir, "manifest.json");
+
+      if (
+        originalManifestPath.includes(".vite") &&
+        fs.existsSync(originalManifestPath)
+      ) {
+        fs.unlinkSync(originalManifestPath);
       }
+
+      fs.writeFileSync(
+        finalManifestPath,
+        JSON.stringify(customManifest, null, 2),
+      );
     },
   };
 }
@@ -42,10 +103,10 @@ function addFrameworkToManifest(frameworkName: string): Plugin {
 export default defineConfig({
   plugins: [
     react({
-      jsxRuntime: 'automatic',
+      jsxRuntime: "automatic",
     }),
     tailwindcss(),
-    addFrameworkToManifest("react"), 
+    createCustomManifest(),
   ],
   define: {
     "process.env.NODE_ENV": JSON.stringify("production"),
