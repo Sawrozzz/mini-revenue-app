@@ -50,6 +50,7 @@ export type Location = {
   longitude: number;
   latitude: number;
   accuracy?: number;
+  timestamp: string;
 };
 
 export type Camera = {
@@ -85,7 +86,9 @@ function getSdk() {
 
 function PlatformSdkProvider({
   children,
+  // moduleId
 }: {
+  moduleId:string;
   children: ReactNode;
 }) {
   const [sdk, setSdk] = useState<any | null>(null);
@@ -535,7 +538,8 @@ function MiniRevenueLicenseApp() {
       {!loadLocation && location && (
         <div className="mt-2 text-sm text-slate-600">
           Lat: {location.latitude}, Lng: {location.longitude}, Accuracy:{" "}
-          {location.accuracy}
+          {location.accuracy},
+          Time: {location?.timestamp ? String(location.timestamp) : ""}
         </div>
       )}
 
@@ -610,7 +614,7 @@ function Info({ label, value }: { label: string; value: React.ReactNode }) {
 
 export default function App() {
   return (
-    <PlatformSdkProvider>
+    <PlatformSdkProvider moduleId={MODULE_ID}>
       <MiniRevenueLicenseApp />
     </PlatformSdkProvider>
   );
