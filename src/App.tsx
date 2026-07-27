@@ -337,9 +337,39 @@ function MiniRevenueLicenseApp() {
 
   const [galleryError, setGalleryError] = useState<string | null>(null);
 
-  const handleImages = () => {
+  const handleImages = async () => {
     setGalleryLoading(true);
     setGalleryError(null);
+
+    if (sdk.platform.isMobile()) {
+      try {
+        const res = await sdk.device.gallery({
+          reason: "To select images",
+          multiple: true,
+        });
+        switch (res.status) {
+          case "granted":
+            setGallery(res.data!.images ?? res.data!);
+            break;
+          case "denied":
+            setGalleryError("Gallery permission denied.");
+            break;
+          case "parmanentlyDenied":
+            setGalleryError("Please enable gallery permission from device settings.");
+            break;
+          case "restricted":
+            setGalleryError("Gallery access is restricted on this device.");
+            break;
+        }
+      } catch (error) {
+        setGalleryError(
+          error instanceof Error ? error.message : "Failed to open gallery.",
+        );
+      } finally {
+        setGalleryLoading(false);
+      }
+      return;
+    }
 
     const input = document.createElement("input");
     input.type = "file";
