@@ -341,79 +341,36 @@ function MiniRevenueLicenseApp() {
     setGalleryLoading(true);
     setGalleryError(null);
 
-    if (sdk.platform.isMobile()) {
-      try {
-        const res = await sdk.device.gallery({
-          reason: "To select images",
-          multiple: true,
-        });
-        switch (res.status) {
-          case "granted":
-            setGallery(res.data!.images ?? res.data!);
-            break;
-          case "denied":
-            setGalleryError("Gallery permission denied.");
-            break;
-          case "parmanentlyDenied":
-            setGalleryError("Please enable gallery permission from device settings.");
-            break;
-          case "restricted":
-            setGalleryError("Gallery access is restricted on this device.");
-            break;
-        }
-      } catch (error) {
-        setGalleryError(
-          error instanceof Error ? error.message : "Failed to open gallery.",
-        );
-      } finally {
-        setGalleryLoading(false);
-      }
-      return;
-    }
-
-    const input = document.createElement("input");
-    input.type = "file";
-    input.multiple = true;
-    input.accept = "image/*";
-
-    input.onchange = () => {
-      if (!input.files || input.files.length === 0) {
-        setGalleryError("No files selected.");
-        setGalleryLoading(false);
-        return;
-      }
-
-      const files: FileModule[] = Array.from(input.files).map((file) => {
-        const blobUrl = URL.createObjectURL(file);
-        const ext = file.name.split(".").pop()?.toLowerCase() || "";
-        return {
-          rawFile: file,
-          url: blobUrl,
-          previewUrl: blobUrl,
-          fileName: file.name,
-          mimeType: file.type || "application/octet-stream",
-          extension: ext,
-          byteSize: file.size,
-        };
+    try {
+      const res = await sdk.device.gallery({
+        reason: "To select images",
+        multiple: true,
       });
-
-      setGallery(files);
+      switch (res.status) {
+        case "granted":
+          setGallery(res.data!.images ?? res.data!);
+          break;
+        case "denied":
+          setGalleryError("Gallery permission denied.");
+          break;
+        case "parmanentlyDenied":
+          setGalleryError(
+            "Please enable gallery permission from device settings.",
+          );
+          break;
+        case "restricted":
+          setGalleryError("Gallery access is restricted on this device.");
+          break;
+      }
+    } catch (error) {
+      setGalleryError(
+        error instanceof Error ? error.message : "Failed to open gallery.",
+      );
+    } finally {
       setGalleryLoading(false);
-    };
-
-    const onFocus = () => {
-      setTimeout(() => {
-        if (!input.files || input.files.length === 0) {
-          setGalleryError("File picker closed.");
-          setGalleryLoading(false);
-        }
-      }, 300);
-    };
-    window.addEventListener("focus", onFocus, { once: true });
-
-    input.click();
+    }
+    return;
   };
-
   const imageSrc = cameraResponse?.url.startsWith("data:")
     ? cameraResponse.url
     : cameraResponse?.url.startsWith("http://") ||
