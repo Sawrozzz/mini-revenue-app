@@ -60,6 +60,20 @@ export type Camera = {
   byteSize: number;
 };
 
+export type FileModule = {
+  rawFile?: File;
+  url: string;
+  fileName?: string;
+  mimeType?: string;
+  extension?: string;
+  byteSize?: number;
+  previewUrl?: string;
+};
+
+export type Gallery = {
+  images: FileModule[];
+};
+
 export type DevicePermissionRespons<T> = {
   status: PermissionStatus;
   data?: T;
@@ -84,11 +98,7 @@ function getSdk() {
   return window.getMiniAppBridge?.()?.getActiveInstance() ?? null;
 }
 
-function PlatformSdkProvider({
-  children,
-}: {
-  children: ReactNode;
-}) {
+function PlatformSdkProvider({ children }: { children: ReactNode }) {
   const [sdk, setSdk] = useState<any | null>(null);
   const [user, setUser] = useState<any | null>(null);
   const [isReady, setIsReady] = useState(false);
@@ -197,11 +207,14 @@ function MiniRevenueLicenseApp() {
   const [cameraResponse, setCameraResponse] = useState<Camera | null>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [loadCamera, setLoadCamera] = useState(false);
-  const [locationPermission, setLocationPermission] =
+  const [devicePermission, setDevicePermission] =
     useState<PermissionStatus | null>(null);
   const [cameraPermission, setCameraPermission] =
     useState<PermissionStatus | null>(null);
   const [license, setLicense] = useState<DriverLicense | null>(null);
+
+  const [gallery, setGallery] = useState<FileModule[] | null>(null);
+  const [galleryLoading, setGalleryLoading] = useState(false);
 
   const userName = user?.name ?? user?.fullName ?? "Guest";
 
@@ -257,8 +270,8 @@ function MiniRevenueLicenseApp() {
       const res = await sdk.device.location({
         reason: "To view your current location",
       });
-      console.log("Location data", res)
-      setLocationPermission(res.status);
+      console.log("Location data", res);
+      setDevicePermission(res.status);
       switch (res.status) {
         case "granted":
           setLocation(res.data!);
@@ -278,7 +291,7 @@ function MiniRevenueLicenseApp() {
       }
     } catch (error) {
       setError((error as any).message);
-      setLocationPermission("denied");
+      setDevicePermission("denied");
     } finally {
       setLoadLocation(false);
     }
@@ -303,7 +316,9 @@ function MiniRevenueLicenseApp() {
           break;
 
         case "parmanentlyDenied":
-          setCameraError("Please enable camera permission from device settings.");
+          setCameraError(
+            "Please enable camera permission from device settings.",
+          );
           break;
 
         case "restricted":
@@ -320,12 +335,61 @@ function MiniRevenueLicenseApp() {
     }
   };
 
+  const [galleryError, setGalleryError] = useState<string | null>(null);
+
+  const handleImages = () => {
+    setGalleryLoading(true);
+    setGalleryError(null);
+
+    const input = document.createElement("input");
+    input.type = "file";
+    input.multiple = true;
+    input.accept = "image/*";
+
+    input.onchange = () => {
+      if (!input.files || input.files.length === 0) {
+        setGalleryError("No files selected.");
+        setGalleryLoading(false);
+        return;
+      }
+
+      const files: FileModule[] = Array.from(input.files).map((file) => {
+        const blobUrl = URL.createObjectURL(file);
+        const ext = file.name.split(".").pop()?.toLowerCase() || "";
+        return {
+          rawFile: file,
+          url: blobUrl,
+          previewUrl: blobUrl,
+          fileName: file.name,
+          mimeType: file.type || "application/octet-stream",
+          extension: ext,
+          byteSize: file.size,
+        };
+      });
+
+      setGallery(files);
+      setGalleryLoading(false);
+    };
+
+    const onFocus = () => {
+      setTimeout(() => {
+        if (!input.files || input.files.length === 0) {
+          setGalleryError("File picker closed.");
+          setGalleryLoading(false);
+        }
+      }, 300);
+    };
+    window.addEventListener("focus", onFocus, { once: true });
+
+    input.click();
+  };
+
   const imageSrc = cameraResponse?.url.startsWith("data:")
     ? cameraResponse.url
     : cameraResponse?.url.startsWith("http://") ||
-      cameraResponse?.url.startsWith("https://")
-    ? cameraResponse.url
-    : `data:${cameraResponse?.mimeType};base64,${cameraResponse?.url}`;
+        cameraResponse?.url.startsWith("https://")
+      ? cameraResponse.url
+      : `data:${cameraResponse?.mimeType};base64,${cameraResponse?.url}`;
 
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col items-center justify-center p-4 md:p-8 antialiased">
@@ -518,6 +582,67 @@ function MiniRevenueLicenseApp() {
 
       <button
         className="rounded border py-2 px-4 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 mt-4"
+        onClick={handleImages}
+        disabled={galleryLoading}
+      >
+        Select Images
+      </button>
+
+      {galleryLoading && (
+        <div className="mt-2">
+          <Loader />
+        </div>
+      )}
+
+      {galleryError && !galleryLoading && (
+        <div className="mt-2 text-sm text-rose-600">{galleryError}</div>
+      )}
+
+      {!galleryLoading && gallery && gallery.length > 0 && (
+        <div className="mt-4 w-full max-w-xl space-y-3">
+          <h3 className="text-sm font-semibold text-slate-700">
+            Selected Images ({gallery.length})
+          </h3>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {gallery.map((img, idx) => (
+              <div
+                key={idx}
+                className="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm"
+              >
+                <img
+                  src={img.previewUrl || img.url}
+                  alt={img.fileName || `Image ${idx + 1}`}
+                  className="w-full h-32 object-cover"
+                />
+                <div className="p-2 text-xs text-slate-600 space-y-1">
+                  <p className="truncate font-medium">
+                    {img.fileName || `image_${idx + 1}`}
+                  </p>
+                  {img.byteSize && (
+                    <p className="text-slate-400">
+                      {(img.byteSize / 1024).toFixed(1)} KB
+                    </p>
+                  )}
+                  {img.mimeType && (
+                    <p className="text-slate-400 truncate">{img.mimeType}</p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+          <details className="mt-2">
+            <summary className="cursor-pointer text-xs font-medium text-slate-500">
+              View Raw Response
+            </summary>
+            <pre className="mt-2 max-h-48 overflow-auto rounded-lg border bg-slate-900 p-3 text-xs text-slate-100">
+              {JSON.stringify(gallery, null, 2)}
+            </pre>
+          </details>
+        </div>
+      )}
+
+      <button
+        className="rounded border py-2 px-4 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 mt-4"
         onClick={handleViewLocation}
         disabled={loadLocation}
       >
@@ -530,15 +655,15 @@ function MiniRevenueLicenseApp() {
         </div>
       )}
 
-      {error && !loadLocation && locationPermission !== "granted" && (
+      {error && !loadLocation && devicePermission !== "granted" && (
         <div className="mt-2 text-sm text-rose-600">{error}</div>
       )}
 
       {!loadLocation && location && (
         <div className="mt-2 text-sm text-slate-600">
           Lat: {location.latitude}, Lng: {location.longitude}, Accuracy:{" "}
-          {location.accuracy},
-          Time: {location?.timestamp ? String(location.timestamp) : ""}
+          {location.accuracy}, Time:{" "}
+          {location?.timestamp ? String(location.timestamp) : ""}
         </div>
       )}
 
@@ -613,7 +738,7 @@ function Info({ label, value }: { label: string; value: React.ReactNode }) {
 
 export default function App() {
   return (
-    <PlatformSdkProvider >
+    <PlatformSdkProvider>
       <MiniRevenueLicenseApp />
     </PlatformSdkProvider>
   );
