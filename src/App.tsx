@@ -1,198 +1,23 @@
+import { useState } from "react";
+import type {
+  DriverLicense,
+  Location,
+  Camera,
+  FileModule,
+  PermissionStatus,
+} from "./types";
 import {
-  useEffect,
-  useState,
-  createContext,
-  useContext,
-  type ReactNode,
-} from "react";
-import "./index.css";
+  PlatformSdkProvider,
+  usePlatformSdk,
+  usePlatformUser,
+} from "./sdk/SdkContext";
 import { Loader } from "./components/Loader";
+import { Info } from "./components/Info";
+import { FileIcon } from "./components/FileIcon";
+import "./index.css";
 
 const MODULE_ID = "mini-revenue-app";
 const CHAT_MODULE_ID = "chat-mini-app";
-
-export type DriverLicense = {
-  licenseNumber: string;
-  firstName: string;
-  middleName: string;
-  lastName: string;
-  dateOfBirth: string;
-  gender: "M" | "F" | "O";
-  address: Address;
-  issueDate: string;
-  expiryDate: string;
-  issuingAuthority: string;
-  licenseClass: string;
-  vehicleCategories: string[];
-  restrictions: string;
-  bloodGroup: string;
-  photoUrl: string;
-  signatureUrl: string;
-  isOrganDonor: boolean;
-  status: "Active" | "Inactive" | "Expired" | "Suspended";
-};
-
-export type Address = {
-  street: string;
-  city: string;
-  state: string;
-  postalCode: string;
-  country: string;
-};
-
-export type PermissionStatus =
-  | "granted"
-  | "denied"
-  | "parmanentlyDenied"
-  | "restricted";
-
-export type Location = {
-  longitude: number;
-  latitude: number;
-  accuracy?: number;
-  timestamp: string;
-};
-
-export type Camera = {
-  url: string;
-  fileName?: string;
-  mimeType?: string;
-  byteSize: number;
-};
-
-export type FileModule = {
-  rawFile?: File;
-  url: string;
-  fileName?: string;
-  mimeType?: string;
-  extension?: string;
-  byteSize?: number;
-  previewUrl?: string;
-};
-
-export type Gallery = {
-  images: FileModule[];
-};
-
-export type DevicePermissionRespons<T> = {
-  status: PermissionStatus;
-  data?: T;
-  error?: string;
-};
-
-interface SdkContextValue {
-  sdk: any | null;
-  user: any | null;
-  isReady: boolean;
-  error: Error | null;
-}
-
-const SdkContext = createContext<SdkContextValue>({
-  sdk: null,
-  user: null,
-  isReady: false,
-  error: null,
-});
-
-function getSdk() {
-  return window.getMiniAppBridge?.()?.getActiveInstance() ?? null;
-}
-
-function PlatformSdkProvider({ children }: { children: ReactNode }) {
-  const [sdk, setSdk] = useState<any | null>(null);
-  const [user, setUser] = useState<any | null>(null);
-  const [isReady, setIsReady] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const tryGetSdk = async () => {
-      for (let attempt = 0; attempt < 10; attempt++) {
-        if (cancelled) return;
-
-        const instance = getSdk();
-
-        if (instance) {
-          try {
-            const u = await instance.auth.getUser();
-            if (cancelled) return;
-
-            setSdk(instance);
-            setUser(u);
-            setIsReady(true);
-            return;
-          } catch {
-            if (cancelled) return;
-            await new Promise((r) => setTimeout(r, 200));
-            continue;
-          }
-        }
-        await new Promise((r) => setTimeout(r, 200));
-      }
-      if (!cancelled) {
-        setError(new Error("SDK not injected after retries."));
-      }
-    };
-
-    tryGetSdk();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  if (error) {
-    return <LoadError message={error.message} />;
-  }
-
-  if (!isReady) return <div>Connecting to platform...</div>;
-
-  return (
-    <SdkContext.Provider value={{ sdk, user, isReady, error }}>
-      {children}
-    </SdkContext.Provider>
-  );
-}
-
-function LoadError({
-  message = "Failed to load the application.",
-}: {
-  message?: string;
-}) {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-6">
-      <div className="max-w-md rounded-xl border border-gray-200 bg-white p-8 text-center shadow-lg">
-        <div className="mb-4 text-5xl">⚠️</div>
-
-        <h1 className="mb-2 text-2xl font-semibold text-gray-900">
-          Failed to Load
-        </h1>
-
-        <p className="mb-6 text-sm text-gray-600">{message}</p>
-
-        <button
-          onClick={() => window.location.reload()}
-          className="rounded-lg bg-indigo-600 px-4 py-2 text-white transition hover:bg-indigo-700"
-        >
-          Retry
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function usePlatformSdk() {
-  const { sdk } = useContext(SdkContext);
-  if (!sdk)
-    throw new Error("usePlatformSdk must be used within PlatformSdkProvider");
-  return sdk;
-}
-
-function usePlatformUser() {
-  const { user } = useContext(SdkContext);
-  return user;
-}
 
 function MiniRevenueLicenseApp() {
   const sdk = usePlatformSdk();
@@ -215,6 +40,15 @@ function MiniRevenueLicenseApp() {
 
   const [gallery, setGallery] = useState<FileModule[] | null>(null);
   const [galleryLoading, setGalleryLoading] = useState(false);
+  const [galleryError, setGalleryError] = useState<string | null>(null);
+
+  const [webImages, setWebImages] = useState<FileModule[] | null>(null);
+  const [webImagesLoading, setWebImagesLoading] = useState(false);
+  const [webImagesError, setWebImagesError] = useState<string | null>(null);
+
+  const [documents, setDocuments] = useState<FileModule[] | null>(null);
+  const [documentsLoading, setDocumentsLoading] = useState(false);
+  const [documentsError, setDocumentsError] = useState<string | null>(null);
 
   const userName = user?.name ?? user?.fullName ?? "Guest";
 
@@ -335,8 +169,6 @@ function MiniRevenueLicenseApp() {
     }
   };
 
-  const [galleryError, setGalleryError] = useState<string | null>(null);
-
   const handleImages = async () => {
     setGalleryLoading(true);
     setGalleryError(null);
@@ -344,14 +176,14 @@ function MiniRevenueLicenseApp() {
     try {
       const res = await sdk.device.gallery({
         reason: "To select images",
-        multiple: true,
+        multiple: false,
       });
       switch (res.status) {
         case "granted":
           setGallery(res.data!.images ?? res.data!);
           break;
         case "denied":
-          setGalleryError("Gallery permission denied.");
+          setGalleryError("Image upload cancelled.");
           break;
         case "parmanentlyDenied":
           setGalleryError(
@@ -369,8 +201,86 @@ function MiniRevenueLicenseApp() {
     } finally {
       setGalleryLoading(false);
     }
-    return;
   };
+
+  const handleImageUploadByWebOnly = async () => {
+    setWebImagesLoading(true);
+    setWebImagesError(null);
+
+    const input = document.createElement("input");
+    input.type = "file";
+    input.multiple = true;
+    input.accept = "image/*";
+
+    input.onchange = () => {
+      if (!input.files || input.files.length === 0) {
+        setWebImagesError("No files selected.");
+        setWebImagesLoading(false);
+        return;
+      }
+
+      const files: FileModule[] = Array.from(input.files).map((file) => {
+        const blobUrl = URL.createObjectURL(file);
+        const ext = file.name.split(".").pop()?.toLowerCase() || "";
+        return {
+          url: blobUrl,
+          previewUrl: blobUrl,
+          fileName: file.name,
+          mimeType: file.type || "image/jpeg",
+          extension: ext,
+          byteSize: file.size,
+        };
+      });
+
+      setWebImages(files);
+      setWebImagesLoading(false);
+    };
+
+    const onFocus = () => {
+      setTimeout(() => {
+        if (!input.files || input.files.length === 0) {
+          setWebImagesError("File picker closed.");
+          setWebImagesLoading(false);
+        }
+      }, 300);
+    };
+    window.addEventListener("focus", onFocus, { once: true });
+
+    input.click();
+  };
+
+  const handleFileUpload = async () => {
+    setDocumentsLoading(true);
+    setDocumentsError(null);
+
+    try {
+      const res = await sdk.device.files({
+        reason: "To select documents",
+        multiple: true,
+      });
+      switch (res.status) {
+        case "granted":
+          setDocuments(res.data!.files ?? res.data!);
+          break;
+        case "denied":
+          setDocumentsError("File access denied.");
+          break;
+        case "parmanentlyDenied":
+          setDocumentsError("Please enable file access from device settings.");
+          break;
+        case "restricted":
+          setDocumentsError("File access is restricted on this device.");
+          break;
+      }
+    } catch (error) {
+      setDocumentsError(
+        error instanceof Error ? error.message : "Failed to open file picker.",
+      );
+    } finally {
+      setDocumentsLoading(false);
+    }
+  };
+
   const imageSrc = cameraResponse?.url.startsWith("data:")
     ? cameraResponse.url
     : cameraResponse?.url.startsWith("http://") ||
@@ -630,6 +540,132 @@ function MiniRevenueLicenseApp() {
 
       <button
         className="rounded border py-2 px-4 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 mt-4"
+        onClick={handleImageUploadByWebOnly}
+        disabled={webImagesLoading}
+      >
+        Select Images (Web Only)
+      </button>
+
+      {webImagesLoading && (
+        <div className="mt-2">
+          <Loader />
+        </div>
+      )}
+
+      {webImagesError && !webImagesLoading && (
+        <div className="mt-2 text-sm text-rose-600">{webImagesError}</div>
+      )}
+
+      {!webImagesLoading && webImages && webImages.length > 0 && (
+        <div className="mt-4 w-full max-w-xl space-y-3">
+          <h3 className="text-sm font-semibold text-slate-700">
+            Web Images ({webImages.length})
+          </h3>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {webImages.map((img, idx) => (
+              <div
+                key={idx}
+                className="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm"
+              >
+                <img
+                  src={img.previewUrl || img.url}
+                  alt={img.fileName || `Image ${idx + 1}`}
+                  className="w-full h-32 object-cover"
+                />
+                <div className="p-2 text-xs text-slate-600 space-y-1">
+                  <p className="truncate font-medium">
+                    {img.fileName || `image_${idx + 1}`}
+                  </p>
+                  {img.byteSize && (
+                    <p className="text-slate-400">
+                      {(img.byteSize / 1024).toFixed(1)} KB
+                    </p>
+                  )}
+                  {img.mimeType && (
+                    <p className="text-slate-400 truncate">{img.mimeType}</p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+          <details className="mt-2">
+            <summary className="cursor-pointer text-xs font-medium text-slate-500">
+              View Raw Response
+            </summary>
+            <pre className="mt-2 max-h-48 overflow-auto rounded-lg border bg-slate-900 p-3 text-xs text-slate-100">
+              {JSON.stringify(webImages, null, 2)}
+            </pre>
+          </details>
+        </div>
+      )}
+
+      <button
+        className="rounded border py-2 px-4 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 mt-4"
+        onClick={handleFileUpload}
+        disabled={documentsLoading}
+      >
+        Upload Documents
+      </button>
+
+      {documentsLoading && (
+        <div className="mt-2">
+          <Loader />
+        </div>
+      )}
+
+      {documentsError && !documentsLoading && (
+        <div className="mt-2 text-sm text-rose-600">{documentsError}</div>
+      )}
+
+      {!documentsLoading && documents && documents.length > 0 && (
+        <div className="mt-4 w-full max-w-xl space-y-3">
+          <h3 className="text-sm font-semibold text-slate-700">
+            Selected Documents ({documents.length})
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {documents.map((doc, idx) => (
+              <div
+                key={idx}
+                className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm"
+              >
+                <FileIcon extension={doc.extension} mimeType={doc.mimeType} />
+                <div className="flex-1 min-w-0">
+                  <p className="truncate text-sm font-medium text-slate-700">
+                    {doc.fileName || `file_${idx + 1}`}
+                  </p>
+                  <div className="flex items-center gap-2 text-xs text-slate-400">
+                    {doc.byteSize && (
+                      <span>{(doc.byteSize / 1024).toFixed(1)} KB</span>
+                    )}
+                    {doc.extension && (
+                      <span className="uppercase">.{doc.extension}</span>
+                    )}
+                  </div>
+                </div>
+                <a
+                  href={doc.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="shrink-0 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 transition"
+                >
+                  Open
+                </a>
+              </div>
+            ))}
+          </div>
+          <details className="mt-2">
+            <summary className="cursor-pointer text-xs font-medium text-slate-500">
+              View Raw Response
+            </summary>
+            <pre className="mt-2 max-h-48 overflow-auto rounded-lg border bg-slate-900 p-3 text-xs text-slate-100">
+              {JSON.stringify(documents, null, 2)}
+            </pre>
+          </details>
+        </div>
+      )}
+
+      <button
+        className="rounded border py-2 px-4 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 mt-4"
         onClick={handleViewLocation}
         disabled={loadLocation}
       >
@@ -708,17 +744,6 @@ function MiniRevenueLicenseApp() {
           </details>
         </div>
       )}
-    </div>
-  );
-}
-
-function Info({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <div className="py-2.5">
-      <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-        {label}
-      </p>
-      <p className="font-medium text-slate-800 mt-0.5 text-sm">{value}</p>
     </div>
   );
 }

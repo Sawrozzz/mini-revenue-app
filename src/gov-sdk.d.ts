@@ -31,6 +31,7 @@ interface GovSdkUser {
  interface GovDeviceSdkModule {
   camera(): Promise<GovDeviceCameraModule>;
   location(): Promise<GovDeviceLocationModule>;
+
 }
 
 
@@ -62,21 +63,12 @@ interface GovSdkHttp {
   ): Promise<{ status: number; data: T; headers: Record<string, string> }>;
 }
 
-interface GovSdkPlatform {
-  readonly type: 'WEB' | 'ANDROID' | 'IOS';
-  isWeb(): boolean;
-  isAndroid(): boolean;
-  isIOS(): boolean;
-  isMobile(): boolean;
-}
-
 interface GovSdkInstance {
   readonly moduleId: string;
   readonly version: string;
   readonly traceId: string;
   auth: GovSdkAuth;
   http: GovSdkHttp;
-  platform: GovSdkPlatform;
   device:GovDeviceSdkModule; 
   destroy(): void;
 }
